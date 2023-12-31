@@ -424,19 +424,19 @@ function Find-Variable() {
         $Pattern = '(?<!\w)\$\w+'
         $Variables = [regex]::Matches($Payload, $Pattern).Value | Where-Object { $_ -notlike '$_*' -and $_ -ne '$true' -and $_ -ne '$false' } | Select-Object -Unique
         $Pattern = '.PARAMETER\s(\w+)'
-        $Parameters = [regex]::Matches($Payload, $Pattern).Value | % { '$' + ($_ -split '\s')[1] }
+        $Parameters = [regex]::Matches($Payload, $Pattern).Value | ForEach-Object { '$' + ($_ -split '\s')[1] }
 
         # Do not touch the built in variables
         $Blacklist = '$?', '$^', '$args', '$ConfirmPreference', '$ConsoleFileName', '$DebugPreference', '$Error', '$ErrorActionPreference', '$ErrorView', '$ExecutionContext', '$false', '$FormatEnumerationLimit', '$HOME', '$Host', '$InformationPreference', '$input', '$LASTEXITCODE', '$MaximumAliasCount', '$MaximumDriveCount', '$MaximumErrorCount', '$MaximumFunctionCount', '$MaximumHistoryCount', '$MaximumVariableCount', '$MyInvocation', '$NestedPromptLevel', '$null', '$OutputEncoding', '$PID', '$PROFILE', '$ProgressPreference', '$PSBoundParameters', '$PSCommandPath', '$PSCulture', '$PSDefaultParameterValues', '$PSEdition', '$PSEmailServer', '$PSHOME', '$PSScriptRoot', '$PSSessionApplicationName', '$PSSessionConfigurationName', '$PSSessionOption', '$PSUICulture', '$PSVersionTable', '$PWD', '$ShellId', '$StackTrace', '$true', '$VerbosePreference', '$WarningPreference', '$WhatIfPreference'
         $Blacklist = $Blacklist + '$Position', '$Ocpffset', '$MarshalAs', '$DllName', '$FunctionName', '$EntryPoint', '$ReturnType', '$ParameterTypes', '$NativeCallingConvention', '$Charset', '$SetLastError', '$Module', '$Namespace'
-        $Variables = Compare-Object -ReferenceObject $Blacklist -DifferenceObject $Variables | ? { $_.SideIndicator -eq '=>' } | Select -ExpandProperty InputObject
+        $Variables = Compare-Object -ReferenceObject $Blacklist -DifferenceObject $Variables | Where-Object { $_.SideIndicator -eq '=>' } | Select-Object -ExpandProperty InputObject
     }
     Process { 
         Try { 
             $Occurrences = Compare-Object -ReferenceObject $Parameters -DifferenceObject $Variables -IncludeEqual
             
             # Parameters
-            $Occurrences | ? { $_.SideIndicator -eq '==' } | % {
+            $Occurrences | Where-Object { $_.SideIndicator -eq '==' } | ForEach-Object {
                 $NewValue = Get-ObfuscatedVariable
                 
                 # Variable Declaration of Parameter
@@ -461,7 +461,7 @@ function Find-Variable() {
             }
             
             # Variables    
-            $Occurrences | ? { $_.SideIndicator -eq '=>' } | % {
+            $Occurrences | Where-Object { $_.SideIndicator -eq '=>' } | ForEach-Object {
                 $NewValue = Get-ObfuscatedVariable               
                 $ToReplace = $($_.InputObject)              
                 $Pattern = '\{0}\b' -f $ToReplace
